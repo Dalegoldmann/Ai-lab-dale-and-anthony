@@ -1,0 +1,6 @@
+{
+  "name": "DC Airbnb Profit & Sensitivity Estimator",
+  "description": "Estimate Airbnb rental revenue and net profit for Washington D.C. properties with dynamic sensitivity analysis based on empirical Inside Airbnb data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
