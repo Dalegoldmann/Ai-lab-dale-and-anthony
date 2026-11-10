@@ -303,55 +303,32 @@ export const SensitivitySliders: React.FC<SensitivitySlidersProps> = ({
         />
       </div>
 
-      {/* Slider 4: Cleaning Fee to Guests & Cleaning Cost */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-zinc-100">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
+      {/* Slider 4: Guest Cleaning Fee Charged */}
+      <div className="space-y-1.5 pt-2 border-t border-zinc-100">
+        <div className="flex items-center justify-between">
+          <div>
             <label className="text-xs font-semibold text-zinc-800">
-              Cleaning Fee Charged
+              Guest Cleaning Fee Charged
             </label>
-            <span className="font-mono text-xs font-bold text-zinc-900 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200">
-              ${sensitivity.cleaningFeeCharged}
-            </span>
+            <p className="text-[11px] text-zinc-500">
+              One-time turnover fee billed to guests on their reservation
+            </p>
           </div>
-          <input
-            type="range"
-            min="0"
-            max="250"
-            step="5"
-            value={sensitivity.cleaningFeeCharged}
-            onChange={(e) =>
-              update({ cleaningFeeCharged: parseInt(e.target.value, 10) })
-            }
-            className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-          />
-          <p className="text-[10px] text-zinc-400">Paid by guest each reservation</p>
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-zinc-800">
-              Actual Cleaning Cost
-            </label>
-            <span className="font-mono text-xs font-bold text-zinc-900 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200">
-              ${sensitivity.cleaningCostPaid}
-            </span>
+          <div className="flex items-center gap-1 bg-zinc-50 border border-zinc-200 px-2.5 py-1 rounded-md font-mono text-sm font-bold text-zinc-900">
+            <span>${sensitivity.cleaningFeeCharged}</span>
           </div>
-          <input
-            type="range"
-            min="0"
-            max="200"
-            step="5"
-            value={sensitivity.cleaningCostPaid}
-            onChange={(e) =>
-              update({ cleaningCostPaid: parseInt(e.target.value, 10) })
-            }
-            className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-700"
-          />
-          <p className="text-[10px] text-zinc-400">
-            {sensitivity.cleaningCostPaid === 0 ? 'Self-cleaned by owner ($0)' : 'Hired cleaning crew'}
-          </p>
         </div>
+        <input
+          type="range"
+          min="0"
+          max="250"
+          step="5"
+          value={sensitivity.cleaningFeeCharged}
+          onChange={(e) =>
+            update({ cleaningFeeCharged: parseInt(e.target.value, 10) })
+          }
+          className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+        />
       </div>
 
       {/* Advanced Operating Expenses Accordion */}
@@ -365,7 +342,7 @@ export const SensitivitySliders: React.FC<SensitivitySlidersProps> = ({
             <span className="flex items-center gap-1.5 font-semibold">
               Operating Expenses & Platform Fees
               <span className="text-[10px] font-normal text-zinc-500 hidden sm:inline">
-                (${sensitivity.monthlyUtilities + sensitivity.monthlySupplies + sensitivity.monthlyMaintenance}/mo + {sensitivity.platformFeePercent}% fee)
+                (${sensitivity.monthlyUtilities + sensitivity.monthlySupplies + sensitivity.monthlyMaintenance + Math.round(turnoversPerMonth * sensitivity.cleaningCostPaid)}/mo + {sensitivity.platformFeePercent}% fee)
               </span>
             </span>
             {showAdvancedExpenses ? (
@@ -385,7 +362,7 @@ export const SensitivitySliders: React.FC<SensitivitySlidersProps> = ({
                 ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
                 : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100'
             }`}
-            title="Reset utilities, supplies, maintenance, platform fee, and management fee back to default baseline values"
+            title="Reset cleaning cost, utilities, supplies, maintenance, platform fee, and management fee back to default baseline values"
           >
             {justResetExpenses ? (
               <>
@@ -403,6 +380,36 @@ export const SensitivitySliders: React.FC<SensitivitySlidersProps> = ({
 
         {showAdvancedExpenses && (
           <div className="space-y-4 pt-3 mt-2 border-t border-zinc-100">
+            {/* Cleaning Cost Paid per Turnover */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-zinc-600">Actual Cleaning Cost Paid:</span>
+                  <span className="text-[10px] text-zinc-400 ml-1.5">
+                    (~$ {Math.round(turnoversPerMonth * sensitivity.cleaningCostPaid)}/mo at {turnoversPerMonth} stays)
+                  </span>
+                </div>
+                <span className="font-mono font-medium text-zinc-900">
+                  ${sensitivity.cleaningCostPaid}/stay
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="250"
+                step="5"
+                value={sensitivity.cleaningCostPaid}
+                onChange={(e) =>
+                  update({ cleaningCostPaid: parseInt(e.target.value, 10) })
+                }
+                className="w-full h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-700"
+              />
+              <div className="flex justify-between text-[10px] text-zinc-400">
+                <span>$0 (Self-cleaned)</span>
+                <span>$95 (Standard)</span>
+                <span>$200+ (Full crew)</span>
+              </div>
+            </div>
             {/* Utilities */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">

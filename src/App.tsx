@@ -13,6 +13,9 @@ import {
   generateSensitivityMatrix,
   DEFAULT_EXPENSES,
   findOptimalPrice,
+  getBedroomPriceMultiplier,
+  getScaledDefaultExpenses,
+  getDefaultLongTermRent,
 } from './utils/calculator';
 import { DC_AIRBNB_DATA } from './data/dcData';
 
@@ -54,12 +57,14 @@ export default function App() {
     currentHoodData?.roomTypes[inputs.roomType] ||
     DC_AIRBNB_DATA.citySummary.cityMedians[inputs.roomType];
 
-  const benchmarkPrice = currentBenchmark ? (
+  const rawBasePrice = currentBenchmark ? (
     inputs.propertyTier === 'budget' ? currentBenchmark.p25Price :
     inputs.propertyTier === 'premium' ? currentBenchmark.p75Price :
     currentBenchmark.medianPrice
   ) : 220;
 
+  const bedroomMultiplier = getBedroomPriceMultiplier(inputs.bedrooms, inputs.roomType);
+  const benchmarkPrice = Math.round(rawBasePrice * bedroomMultiplier);
   const benchmarkOccupancy = Math.round((currentBenchmark?.estimatedOccupancyRate || 0.65) * 100);
 
   const optimalPriceData = useMemo(() => {
@@ -72,32 +77,44 @@ export default function App() {
     );
   }, [benchmarkPrice, benchmarkOccupancy, sensitivity, inputs.longTermRentBenchmark, inputs.isHosted]);
 
-  // When neighborhood or room type changes, update benchmark defaults
+  // When neighborhood, room type, bedrooms, or bathrooms change, update benchmark defaults
   const handlePropertyInputsChange = (newInputs: PropertyInputs) => {
     const hoodChanged = newInputs.neighbourhood !== inputs.neighbourhood;
     const roomChanged = newInputs.roomType !== inputs.roomType;
+    const bedroomsChanged = newInputs.bedrooms !== inputs.bedrooms;
+    const bathroomsChanged = newInputs.bathrooms !== inputs.bathrooms;
     const hostedChanged = newInputs.isHosted !== inputs.isHosted;
+
+    // Automatically suggest capacity and long-term benchmark when bedrooms change
+    if (bedroomsChanged) {
+      newInputs.accommodates = newInputs.bedrooms === 0 ? 2 : Math.max(2, newInputs.bedrooms * 2);
+      newInputs.longTermRentBenchmark = getDefaultLongTermRent(newInputs.bedrooms, newInputs.roomType);
+    }
 
     setInputs(newInputs);
 
-    if (hoodChanged || roomChanged) {
+    if (hoodChanged || roomChanged || bedroomsChanged || bathroomsChanged) {
       const targetHood = DC_AIRBNB_DATA.neighborhoods[newInputs.neighbourhood];
       const targetBench =
         targetHood?.roomTypes[newInputs.roomType] ||
         DC_AIRBNB_DATA.citySummary.cityMedians[newInputs.roomType];
 
       if (targetBench) {
-        let newPrice = targetBench.medianPrice;
-        if (newInputs.propertyTier === 'budget') newPrice = targetBench.p25Price;
-        if (newInputs.propertyTier === 'premium') newPrice = targetBench.p75Price;
+        let basePrice = targetBench.medianPrice;
+        if (newInputs.propertyTier === 'budget') basePrice = targetBench.p25Price;
+        if (newInputs.propertyTier === 'premium') basePrice = targetBench.p75Price;
 
+        const mult = getBedroomPriceMultiplier(newInputs.bedrooms, newInputs.roomType);
+        const newScaledPrice = Math.round(basePrice * mult);
         const newOcc = Math.round((targetBench.estimatedOccupancyRate || 0.65) * 100);
+        const scaledExpenses = getScaledDefaultExpenses(newInputs.bedrooms, newInputs.bathrooms, newInputs.roomType);
 
         setSensitivity((prev) => ({
           ...prev,
-          nightlyPrice: newPrice,
+          nightlyPrice: newScaledPrice,
           occupancyPercent: newOcc,
           avgStayLength: Math.max(2, targetBench.medianMinNights ? targetBench.medianMinNights + 1.5 : 3.5),
+          ...scaledExpenses,
         }));
       }
     }
@@ -112,9 +129,12 @@ export default function App() {
 
   const handleApplyTierPrice = (tier: 'budget' | 'median' | 'premium') => {
     if (!currentBenchmark) return;
-    let targetPrice = currentBenchmark.medianPrice;
-    if (tier === 'budget') targetPrice = currentBenchmark.p25Price;
-    if (tier === 'premium') targetPrice = currentBenchmark.p75Price;
+    let basePrice = currentBenchmark.medianPrice;
+    if (tier === 'budget') basePrice = currentBenchmark.p25Price;
+    if (tier === 'premium') basePrice = currentBenchmark.p75Price;
+
+    const mult = getBedroomPriceMultiplier(inputs.bedrooms, inputs.roomType);
+    const targetPrice = Math.round(basePrice * mult);
 
     setSensitivity((prev) => ({
       ...prev,
@@ -128,6 +148,10 @@ export default function App() {
     setInputs((prev) => ({
       ...prev,
       propertyTier: 'median',
+      bedrooms: 2,
+      bathrooms: 1.5,
+      accommodates: 4,
+      longTermRentBenchmark: 2800,
     }));
     setSensitivity({
       nightlyPrice: currentBenchmark.medianPrice,

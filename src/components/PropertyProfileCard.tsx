@@ -1,6 +1,6 @@
 import React from 'react';
 import { Building2, BedDouble, Bath, ShieldAlert, Sparkles, MapPin } from 'lucide-react';
-import { PropertyInputs } from '../utils/calculator';
+import { PropertyInputs, getBedroomPriceMultiplier } from '../utils/calculator';
 import { DC_AIRBNB_DATA } from '../data/dcData';
 
 interface PropertyProfileCardProps {
@@ -22,6 +22,8 @@ export const PropertyProfileCard: React.FC<PropertyProfileCardProps> = ({
   const roomBenchmark =
     currentHoodData?.roomTypes[inputs.roomType] ||
     DC_AIRBNB_DATA.citySummary.cityMedians[inputs.roomType];
+
+  const bedroomMult = getBedroomPriceMultiplier(inputs.bedrooms, inputs.roomType);
 
   const handleNeighborhoodChange = (hood: string) => {
     onChange({
@@ -188,34 +190,36 @@ export const PropertyProfileCard: React.FC<PropertyProfileCardProps> = ({
 
       {/* Property Condition / Tier Selection */}
       <div className="space-y-2">
-        <label className="text-xs font-medium text-zinc-700 flex items-center justify-between">
-          <span className="flex items-center gap-1">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium text-zinc-700 flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5 text-zinc-500" />
             Finishing & Quality Tier
-          </span>
-          <span className="text-[11px] text-zinc-500">
-            Calibrates base rate to Inside Airbnb quantiles
-          </span>
-        </label>
+          </label>
+          {inputs.roomType === 'Entire home/apt' && inputs.bedrooms !== 2 && (
+            <span className="text-[10px] font-mono text-zinc-500">
+              {inputs.bedrooms === 0 ? 'Studio' : `${inputs.bedrooms}BR`} scale: {bedroomMult}x
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-3 gap-2">
           {[
             {
               id: 'budget' as const,
               label: 'Budget / Cozy',
               quantileLabel: '25th %ile',
-              price: roomBenchmark?.p25Price || 120,
+              price: Math.round((roomBenchmark?.p25Price || 120) * bedroomMult),
             },
             {
               id: 'median' as const,
               label: 'Standard / Modern',
               quantileLabel: 'Median (50th)',
-              price: roomBenchmark?.medianPrice || 180,
+              price: Math.round((roomBenchmark?.medianPrice || 180) * bedroomMult),
             },
             {
               id: 'premium' as const,
               label: 'Luxury / Historic',
               quantileLabel: '75th %ile',
-              price: roomBenchmark?.p75Price || 260,
+              price: Math.round((roomBenchmark?.p75Price || 260) * bedroomMult),
             },
           ].map((tier) => {
             const isSelected = inputs.propertyTier === tier.id;
